@@ -1,0 +1,7 @@
+out/
+/mill
+.bsp/
+.idea/
+*.class
+__pycache__/
+test-project/snapshot.json

@@ -1,0 +1,37 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Mill 1.1.9
+        run: |
+          curl -fLsS https://repo1.maven.org/maven2/com/lihaoyi/mill-dist/1.1.9/mill-dist-1.1.9-mill.sh -o mill
+          chmod +x mill
+      - name: Test and publish locally
+        run: |
+          ./mill --no-daemon plugin.test
+          ./mill --no-daemon plugin.publishLocal
+      - name: Check the actual imported plugin output
+        env:
+          COURSIER_REPOSITORIES: ivy2Local|central
+        run: |
+          cd test-project
+          ../mill --no-daemon --ticker false \
+            --import 'mvn:io.github.zhutmost::mill-dependency-graph::0.1.0' \
+            show mill.dependencygraph.DependencyGraph/generate > snapshot.json
+          python3 check_snapshot.py snapshot.json
+      - name: Submit this build with the Action
+        if: github.event_name == 'push'
+        uses: ./

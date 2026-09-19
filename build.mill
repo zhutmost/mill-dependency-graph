@@ -1,0 +1,29 @@
+//| mill-version: 1.1.9
+//| mill-jvm-version: system
+
+package build
+
+import mill.*
+import mill.scalalib.*
+import mill.scalalib.publish.*
+
+object plugin extends ScalaModule, PublishModule {
+  def scalaVersion = "3.8.2"
+  override def artifactName = Task { "mill-dependency-graph" }
+  def platformSuffix = "_mill1"
+  def mvnDeps = Seq(mvn"com.lihaoyi::mill-libs:1.1.9")
+
+  def publishVersion = "0.1.0"
+  def pomSettings = PomSettings(
+    description = "Submit Mill 1.x dependencies to the GitHub dependency graph",
+    organization = "io.github.zhutmost",
+    url = "https://github.com/zhutmost/mill-dependency-graph",
+    licenses = Seq(License.MIT),
+    versionControl = VersionControl.github("zhutmost", "mill-dependency-graph"),
+    developers = Seq(Developer("zhutmost", "Haozhe Zhu", "https://github.com/zhutmost"))
+  )
+
+  object test extends ScalaTests, TestModule.Utest {
+    def mvnDeps = Seq(mvn"com.lihaoyi::mill-testkit:1.1.9")
+  }
+}

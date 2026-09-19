@@ -1,0 +1,69 @@
+name: Mill Dependency Graph
+description: Submit a Mill 1.x build's resolved JVM dependencies to the GitHub dependency graph
+inputs:
+  working-directory:
+    description: Directory containing the Mill build
+    required: false
+    default: .
+  token:
+    description: Token with contents write permission
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Generate dependency graph
+      shell: bash
+      env:
+        BUILD_DIR: ${{ inputs.working-directory }}
+        ACTION_DIR: ${{ github.action_path }}
+        GRAPH_FILE: ${{ runner.temp }}/mill-dependency-graph.json
+      run: |
+        set -euo pipefail
+        build_dir="$(cd "$BUILD_DIR" && pwd)"
+        if [[ -x "$build_dir/mill" ]]; then
+          mill="$build_dir/mill"
+        elif [[ -x "$build_dir/millw" ]]; then
+          mill="$build_dir/millw"
+        else
+          mill="$(command -v mill)"
+        fi
+
+        # Build the bundled plugin so the Action also works before a Maven Central release.
+        (cd "$ACTION_DIR" && "$mill" --no-daemon plugin.publishLocal)
+        export COURSIER_REPOSITORIES="ivy2Local|${COURSIER_REPOSITORIES:-central}"
+        (cd "$build_dir" && "$mill" --no-daemon --ticker false \
+          --import 'mvn:io.github.zhutmost::mill-dependency-graph::0.1.0' \
+          show mill.dependencygraph.DependencyGraph/generate > "$GRAPH_FILE")
+    - name: Submit dependency graph
+      uses: actions/github-script@v8
+      env:
+        GRAPH_FILE: ${{ runner.temp }}/mill-dependency-graph.json
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const fs = require('node:fs')
+          const { manifests } = JSON.parse(fs.readFileSync(process.env.GRAPH_FILE, 'utf8'))
+          if (!manifests || Object.keys(manifests).length === 0) {
+            throw new Error('The Mill build did not contain any JVM modules')
+          }
+          await github.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', {
+            ...context.repo,
+            version: 0,
+            sha: context.sha,
+            ref: context.ref,
+            job: {
+              id: `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`,
+              correlator: `${process.env.GITHUB_WORKFLOW}/${process.env.GITHUB_JOB}`
+            },
+            detector: {
+              name: 'mill-dependency-graph',
+              version: '0.1.0',
+              url: 'https://github.com/zhutmost/mill-dependency-graph'
+            },
+            scanned: new Date().toISOString(),
+            manifests
+          })
+branding:
+  icon: package
+  color: blue
