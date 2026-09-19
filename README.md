@@ -45,6 +45,11 @@ The Action submits a snapshot for the triggering commit. Run it on pushes to the
 default branch; dependency review on pull requests can then compare snapshots.
 GitHub requires `contents: write` for dependency submission.
 
+In a matrix job, the Action adds the matrix values to its snapshot correlator so
+GitHub can keep each variation's dependency graph. Set the optional `correlator`
+input to a stable, unique string if you submit multiple builds from one job and
+matrix variation.
+
 ## 🔎 What is reported
 
 Each `JavaModule` or `ScalaModule`, including test modules, becomes a logical
