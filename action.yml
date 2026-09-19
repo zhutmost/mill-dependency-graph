@@ -10,7 +10,11 @@ inputs:
     required: false
     default: ${{ github.token }}
   correlator:
-    description: Stable snapshot key; defaults to the workflow, job, and matrix values
+    description: Stable snapshot key; defaults to the workflow, job, and matrix slot
+    required: false
+    default: ''
+  retire-correlators:
+    description: Previous snapshot keys to clear, one per line
     required: false
     default: ''
 runs:
@@ -43,8 +47,9 @@ runs:
       uses: actions/github-script@v8
       env:
         GRAPH_FILE: ${{ runner.temp }}/mill-dependency-graph.json
-        MATRIX_JSON: ${{ toJSON(matrix) }}
+        MATRIX_INDEX: ${{ strategy.job-index }}
         CORRELATOR: ${{ inputs.correlator }}
+        RETIRE_CORRELATORS: ${{ inputs.retire-correlators }}
       with:
         github-token: ${{ inputs.token }}
         script: |
@@ -53,11 +58,18 @@ runs:
           if (!manifests || Object.keys(manifests).length === 0) {
             throw new Error('The Mill build did not contain any JVM modules')
           }
-          const matrix = JSON.parse(process.env.MATRIX_JSON || 'null')
-          const matrixKey = matrix && Object.keys(matrix).length ? `/${JSON.stringify(matrix)}` : ''
+          // Slot 0 keeps the original key, so switching a job to a matrix updates
+          // its old snapshot instead of leaving it behind.
+          const index = process.env.MATRIX_INDEX
+          const matrixKey = index && index !== '0' ? `/${index}` : ''
           const correlator = process.env.CORRELATOR ||
             `${process.env.GITHUB_WORKFLOW}/${process.env.GITHUB_JOB}${matrixKey}`
-          await github.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', {
+          const retired = [...new Set(process.env.RETIRE_CORRELATORS.split(/\r?\n/)
+            .map(key => key.trim()).filter(Boolean))]
+          if (retired.includes(correlator)) {
+            throw new Error(`Cannot retire the current snapshot key: ${correlator}`)
+          }
+          const snapshot = {
             ...context.repo,
             version: 0,
             sha: context.sha,
@@ -73,7 +85,16 @@ runs:
             },
             scanned: new Date().toISOString(),
             manifests
-          })
+          }
+          const route = 'POST /repos/{owner}/{repo}/dependency-graph/snapshots'
+          await github.request(route, snapshot)
+          for (const key of retired) {
+            await github.request(route, {
+              ...snapshot,
+              job: { ...snapshot.job, correlator: key },
+              manifests: { retired: { name: 'retired', resolved: {} } }
+            })
+          }
 branding:
   icon: package
   color: blue
