@@ -51,6 +51,8 @@ object DependencyGraph extends ExternalModule {
     val resolver = module.defaultResolver
     Task.Anon {
       val deps = pluginDeps()
+      // Mill's scalacPluginClasspath resolves transitive dependencies. Its -Xplugin
+      // options use only the plugin jars, but those libraries are still on the classpath.
       if (deps.isEmpty) None else Some(resolver().resolution(deps))
     }
   }

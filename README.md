@@ -1,10 +1,9 @@
 # 📦 Mill Dependency Graph
 
-Submit the resolved JVM dependencies of a [Mill](https://mill-build.org) 1.x build
+Submit the resolved JVM dependencies of a [Mill](https://mill-build.org) 1.1+ build
 to GitHub's [dependency graph](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/exploring-the-dependencies-of-a-repository).
-Targets Mill **1.x** and is currently tested with **1.1.9**. Compatibility with
-other 1.x releases has not yet been verified. The Mill plugin and GitHub Action
-live in this repository.
+Supports Mill **1.1+** and is currently tested with **1.1.9**. The Mill plugin
+and GitHub Action live in this repository.
 
 ## 🚀 Use the Action
 
@@ -52,10 +51,12 @@ manifest named `mill:<module path>`. The plugin reads Mill's Coursier resolution
 for the production runtime, compile-only and Scala compiler plugin classpaths;
 it reports resolved Maven coordinates, dependency edges, and direct/indirect
 relationships. Production runtime dependencies are `runtime`; compile-only,
-compiler plugin and test-module dependencies are `development`. If a package is
-used in both, `runtime` wins. BOM entries and Mill's internal module identities
-are not submitted as external packages. Logical manifests do not claim a
-physical `build.mill` source file, because several modules can share one file.
+compiler plugin and test-module dependencies are `development`. Compiler plugin
+dependencies include the transitive libraries on Mill's `scalacPluginClasspath`.
+If a package is used in both, `runtime` wins. BOM entries and Mill's internal
+module identities are not submitted as external packages. Logical manifests do
+not claim a physical `build.mill` source file, because several modules can share
+one file.
 
 Local jars from `unmanagedClasspath`, native dependencies and dependencies
 used solely by `build.mill` itself are outside this JVM dependency graph.
