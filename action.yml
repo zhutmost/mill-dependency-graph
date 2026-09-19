@@ -9,6 +9,10 @@ inputs:
     description: Token with contents write permission
     required: false
     default: ${{ github.token }}
+  correlator:
+    description: Stable snapshot key; defaults to the workflow, job, and matrix values
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -39,6 +43,8 @@ runs:
       uses: actions/github-script@v8
       env:
         GRAPH_FILE: ${{ runner.temp }}/mill-dependency-graph.json
+        MATRIX_JSON: ${{ toJSON(matrix) }}
+        CORRELATOR: ${{ inputs.correlator }}
       with:
         github-token: ${{ inputs.token }}
         script: |
@@ -47,6 +53,10 @@ runs:
           if (!manifests || Object.keys(manifests).length === 0) {
             throw new Error('The Mill build did not contain any JVM modules')
           }
+          const matrix = JSON.parse(process.env.MATRIX_JSON || 'null')
+          const matrixKey = matrix && Object.keys(matrix).length ? `/${JSON.stringify(matrix)}` : ''
+          const correlator = process.env.CORRELATOR ||
+            `${process.env.GITHUB_WORKFLOW}/${process.env.GITHUB_JOB}${matrixKey}`
           await github.request('POST /repos/{owner}/{repo}/dependency-graph/snapshots', {
             ...context.repo,
             version: 0,
@@ -54,7 +64,7 @@ runs:
             ref: context.ref,
             job: {
               id: `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`,
-              correlator: `${process.env.GITHUB_WORKFLOW}/${process.env.GITHUB_JOB}`
+              correlator
             },
             detector: {
               name: 'mill-dependency-graph',
