@@ -1,5 +1,5 @@
 name: Mill Dependency Graph
-description: Submit a Mill 1.x build's resolved JVM dependencies to the GitHub dependency graph
+description: Submit a Mill 1.1+ build's resolved JVM dependencies to the GitHub dependency graph
 inputs:
   working-directory:
     description: Directory containing the Mill build

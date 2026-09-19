@@ -15,7 +15,7 @@ object plugin extends ScalaModule, PublishModule {
 
   def publishVersion = "0.1.0"
   def pomSettings = PomSettings(
-    description = "Submit Mill 1.x dependencies to the GitHub dependency graph",
+    description = "Submit Mill 1.1+ dependencies to the GitHub dependency graph",
     organization = "io.github.zhutmost",
     url = "https://github.com/zhutmost/mill-dependency-graph",
     licenses = Seq(License.MIT),
