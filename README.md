@@ -48,6 +48,9 @@ In a matrix job, the Action uses the workflow and job name for slot 0, and adds
 the zero-based matrix job index for subsequent slots (for example, `Build/submit`
 and `Build/submit/1`). These keys stay the same if a matrix value changes. Set
 `correlator` to a stable, unique key if you submit multiple builds from one slot.
+The default key also changes when you rename the workflow or job. To preserve
+the existing snapshot, set `correlator` to its previous key before renaming;
+if the renamed job has already submitted a snapshot, retire its temporary key.
 
 When you **remove a matrix slot** or change a custom correlator, submit an empty
 snapshot under each old key once. List those exact keys with `retire-correlators`:
