@@ -51,3 +51,9 @@ jobs:
           chmod +x mill
       - name: Submit this build with the Action
         uses: ./
+        with:
+          # Keep the snapshot key used before submission moved out of the plugin job.
+          correlator: CI/plugin
+          # The first run after the job rename submitted CI/submit. Remove this
+          # retirement after one successful main-branch run with these settings.
+          retire-correlators: CI/submit
